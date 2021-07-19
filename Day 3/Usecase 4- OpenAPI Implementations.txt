@@ -1,0 +1,35 @@
+# Use case 2
+============
+git clone 
+cd helidon-examples-Day3
+cd copyopenapi-basic
+mvn clean package -D skipTests=true
+java -jar target/helidon-examples-microprofile-openapi-basic.jar
+
+
+Step 1
+refer dependencies for openapi
+
+Step 2
+Verifiy Annotations at GreetResource.java
+
+@GET
+@Operations
+@APIResponse
+
+Step 3
+Optional openapi.yaml or json in resource folder
+
+Step 4
+Java Class implement OASModuleReader
+
+Step 5
+microprofile-config.properties
+
+mp.openapi.filter=
+mp.openapi.mode.reader=
+
+
+Step 6
+Access endpoints
+ 

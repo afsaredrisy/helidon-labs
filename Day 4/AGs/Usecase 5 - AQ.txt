@@ -1,0 +1,51 @@
+Oracle Advanced Queueing (AQ) is the message queueing service used by the Oracle database. By providing PLSQL and JMS APIs in Advanced Queueing, Helidon is now uniquely positioned to interact with database events and benefit from Oracle database’s durability and high availability.
+
+
+Use case -4 
+AQ
+
+Step 1
+mkdir helidon-aq
+cd helidon-aq
+
+Step 2
+git clone 
+edit docker-compose.yaml - KAFKA_ADVERTISED_LISTENERS
+
+environment:
+      LOG_DIR: "/tmp/logs"
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.99.105:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+
+docker-compose up -d
+verify kafka containers status - docker ps -a
+docker logs kafka...
+
+
+Step 3
+Edit microprofile-config.properties under resources for src
+
+# Kafka Sink
+smallrye.messaging.sink.data.bootstrap.servers=192.168.99.105:9092
+
+## Kafka Source
+smallrye.messaging.source.kafka.bootstrap.servers=192.168.99.105:9092
+
+Step 4
+
+mvn package -DskipTests
+java --illegal-access=permit -jar target/helidon-example-mp-rx-msg-kafka.jar
+from browser , access http://localhost:8090/greet
+Open another GIT Bash terminal -->
+ curl -X PUT -H "Content-Type: application/json" -d '{"greeting" : "Hola"}' http://localhost:8090/greet/greeting
+
+In the Kafka Terminal -
+2021.07.13 20:13:44 INFO io.helidon.examples.mp.kafka.RxMessagingKafkaProducer Thread[ForkJoinPool.commonPool-worker-5,5,main]: Sending message to kafka with the message: {"greeting":"Hola"}
+2021.07.13 20:13:44 INFO io.helidon.examples.mp.kafka.RxMessagingKafkaConsumer Thread[ForkJoinPool.commonPool-worker-5,5,main]: Received: {"greeting":"Hola"} from topic demoTopic in partition null
+
+from browser , access http://localhost:8090/greet
+
+
+
+
+

@@ -1,0 +1,41 @@
+Jedis Server withe Redis Client
+We use the a simple greeting REST API  to exercise the Redis Publish Subscribe feature. When a client updates the greeting message, the Greeting resource implementation will publish the new greeting message to Redis channel topic for use by interested parties(consumers)
+
+docker run -d -p 6379:6379 --name redis-demo redis
+
+
+Edit config.properties
+update redis.host
+
+Lettuce - Client Library to connect to Redis
+
+RedisMessageConsumer
+This class contains the logic for listening to the Redis channel for messages. This class uses a custom annotation '@Startup' so that it gets instantiated on application start up. The annotation '@Startup' is provided by io.helidon.examples.mp.spi.StartupInitializerExtension class in this project. 
+
+RedisMessageProducer: This class contains the logic for publishing messages to the Redis channel topic. It is used by GreetResource class.
+
+GreetResource: : This is the REST resource implementation used in this example. When updateGreeting method is called via REST PUT operation, the new greeting sent by client is sent to Redis channel for consumption by the Redis channel subscribers
+
+microprofile-config.properties: This config file holds the Redis server configuration used in this example
+
+
+
+mvn package -DskipTests
+java --illegal-access=permit -jar target/helidon-example-mp-redis.jar
+
+http://localhost:8080/greet
+
+
+This is simple example that use Redis to notify interested parties when the greeting resource is getting modified. Whenever a client modifies the greeting via PUT method call as shown below, the GreetResource::updateGreeting() implementation publishes the modified greeting value to Redis topic. Redis consumers who listen on the specified channel, gets the modified greeting messages.
+
+curl -X PUT -H "Content-Type: application/json" -d '{"greeting" : "Hola"}' http://localhost:8080/greet/greeting
+
+Refer the logs for Message Producer and consumer.
+
+
+
+
+
+
+
+

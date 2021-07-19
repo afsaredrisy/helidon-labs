@@ -1,0 +1,354 @@
+Use-case 3
+CDI Extensions
+Hikari CP, Oracle UCP, Jedis, OCI Object Storage.
+Use-case 5
+
+Asynchronous Communications
+CDI - Reactive Messaging, CORS
+@Incoming
+@Outgoing
+Connector -Kafka, JMS, AQ
+Channel
+
+Use-case 4
+HealthChecks, Metrics and Tracing
+Zipkin and Jaeger Tracing
+HealthChecks - Microprofile Health
+
+
+
+Use case -3
+Hikari CP Use case Implementation
+
+
+mvn archetype:generate \
+-DinteractiveMode=false \
+-DarchetypeGroupId=io.helidon.archetypes \
+-DarchetypeArtifactId=helidon-mp \
+-DarchetypeVersion=2.0.0-M1 \
+-DgroupId=io.helidon.example \
+-DartifactId=helidon-jpa \
+-Dpackage=io.helidon.example.jpa \
+-DrestResourceName=ExampleResource \
+-DapplicationName=ExampleApplication
+
+pom.xml
+=======
+The first component you’ll need is a JDBC-compliant database driver. For this example, we’ll use the H2 database driver. 
+Place this in your pom.xml file in the <dependencies> section:
+
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <version>1.4.200</version>
+    <scope>runtime</scope>
+</dependency>
+
+The next component you’ll need is a database connection pool. Helidon MicroProfile comes with support for a couple of connection pools: HikariCP and Oracle’s Universal Connection Pool. In this example, we’ll choose the HikariCP connection pool. 
+Place this in your pom.xml file in the <dependencies> section:
+
+<dependency>
+    <groupId>io.helidon.integrations.cdi</groupId>
+    <artifactId>helidon-integrations-cdi-datasource-hikaricp</artifactId>
+    <scope>runtime</scope>
+</dependency>
+
+
+he next component that you’ll add is a Java Transaction API (JTA)-compliant transaction manager. Helidon has support for the Narayana transaction engine. This component will allow your JPA application to not have to worry about setting up and tearing down transactions manually, or doing the right thing when rollbacks occur
+
+
+dependency>
+    <groupId>io.helidon.integrations.cdi</groupId>   
+    <artifactId>helidon-integrations-cdi-jta-weld</artifactId>     
+    <scope>runtime</scope>
+</dependency>
+
+The next component is Helidon MicroProfile’s JPA support: the glue code that binds a JPA provider to the connection pool and the transaction manager. Now that you’ve added implementations of those components above, you can now add Helidon MicroProfile’s JPA support on top of them
+
+the last component in the runtime puzzle is the JPA provider itself. You can choose from EclipseLink or Hibernate. In this example, we’ll use EclipseLink.
+ 
+<dependency>
+    <groupId>io.helidon.integrations.cdi</groupId>
+    <artifactId>helidon-integrations-cdi-jpa</artifactId>
+    <scope>runtime</scope>
+</dependency>
+
+<dependency>
+    <groupId>io.helidon.integrations.cdi</groupId>
+    <artifactId>helidon-integrations-cdi-eclipselink</artifactId>
+    <scope>runtime</scope>
+</dependency>
+
+First, you’ll need to make sure your project knows about the provider-independent JPA and JTA APIs themselves. You’ve added the runtime components that implement these APIs above, but if you try to write code that uses things like EntityManager right now your code won’t compile. 
+
+<dependency>
+    <groupId>jakarta.persistence</groupId>
+    <artifactId>jakarta.persistence-api</artifactId> 
+    <version>2.2.2</version>
+    <scope>provided</scope>
+</dependency>
+<dependency>
+    <groupId>javax.transaction</groupId>
+    <artifactId>javax.transaction-api</artifactId>
+    <version>1.2</version>
+    <scope>provided</scope>
+</dependency>
+
+
+src/main/resources/greeting.ddl
+================================
+
+
+CREATE TABLE IF NOT EXISTS GREETING (
+    SALUTATION VARCHAR(64) NOT NULL PRIMARY KEY,
+    RESPONSE VARCHAR(64) NOT NULL
+);
+
+MERGE INTO GREETING (SALUTATION, RESPONSE) VALUES ('Marco', 'Polo');
+
+
+Update application.yml
+======================
+
+server:
+    port: 8080
+javax:
+    sql:
+        DataSource:
+            greetingDataSource:
+                dataSourceClassName: org.h2.jdbcx.JdbcDataSource
+                dataSource:
+                    url: jdbc:h2:mem:greeting;INIT=RUNSCRIPT FROM 'classpath:greeting.ddl' 
+                    user: sa
+                    password: ""
+
+
+The configuration under the javax/sql/DataSource YAML structure tells the connection pool how to make, unsurprisingly, javax.sql.DataSource instances. In this case, we have a recipe that says how to make a javax.sql.DataSource instance named greetingDataSource.
+
+The information under that is subject to the rules of the HikariCP connection pool, and you can read all about it on its website. Briefly, with the dataSourceClassName property we say what database driver-supplied DataSource class to use as the foundation (org.h2.jdbcx.JdbcDataSource), and then, under the dataSource heading, we specify various properties to set on it. Here we specify the url, user and password properties.
+
+META-INF/persistence.xml
+========================
+
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.2" 
+             xmlns="http://xmlns.jcp.org/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence
+                                 http://xmlns.jcp.org/xml/ns/persistence/persistence_2_2.xsd">
+    <persistence-unit name="greeting" transaction-type="JTA"> 
+        <description>A persistence unit for the greeting example.</description>
+        <jta-data-source>greetingDataSource</jta-data-source> 
+        <class>io.helidon.example.jpa.Greeting</class> 
+        <properties> 
+            <property name="eclipselink.deploy-on-startup" value="true"/>
+            <property name="eclipselink.jdbc.native-sql" value="true"/>
+            <property name="eclipselink.logging.logger" value="JavaLogger"/>
+            <property name="eclipselink.logging.parameters" value="true"/>
+            <property name="eclipselink.target-database" value="org.eclipse.persistence.platform.database.H2Platform"/> 
+            <property name="eclipselink.target-server" value="io.helidon.integrations.cdi.eclipselink.CDISEPlatform"/> 
+            <property name="eclipselink.weaving" value="false"/> 
+        </properties>
+    </persistence-unit>
+</persistence>
+
+Now add Logging Properties
+===========================
+
+src/main/resources/logging.properties
+
+.level=DEBUG
+handlers=io.helidon.common.HelidonConsoleHandler
+java.util.logging.SimpleFormatter.format=%1$tY.%1$tm.%1$td %1$tH:%1$tM:%1$tS %4$s %3$s !thread!: %5$s%6$s%n
+
+com.zaxxer.hikari.level=INFO
+h2database.level=WARNING
+io.netty.level=INFO
+org.eclipse.persistence.level=FINE
+org.glassfish.jersey.server.level=CONFIG
+
+Add Greeting.java
+==================
+package io.helidon.example.jpa;
+
+import java.io.Serializable;
+import java.util.Objects;
+
+import java.lang.*;
+import javax.persistence.Access;
+import javax.persistence.AccessType;
+import javax.persistence.Basic;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Access(value = AccessType.FIELD) 
+@Entity(name = "Greeting") 
+@Table(name = "GREETING") 
+public class Greeting implements Serializable { 
+
+    @Column(
+        insertable = true,
+        name = "SALUTATION", 
+        nullable = false,
+        updatable = false
+    )
+    @Id 
+    private String salutation;
+
+    @Basic(optional = false) 
+    @Column(
+        insertable = true,
+        name = "RESPONSE",
+        nullable = false,
+        updatable = true
+    )
+    private String response;
+
+    @Deprecated
+    protected Greeting() { 
+        super();
+    }
+
+    public Greeting(String salutation, String response) { 
+        super();
+        this.salutation = Objects.requireNonNull(salutation);
+        this.setResponse(response);
+    }
+
+    public String getSalutation() {
+        return this.salutation;
+    }
+
+    public String getResponse() {
+        return this.response;
+    }
+
+    public void setResponse(String response) {
+        this.response = Objects.requireNonNull(response);
+    }
+
+    @Override
+    public String toString() {
+        return this.getSalutation() + " " + this.getResponse();
+    }
+
+}
+
+Now add Build Time Weaving:
+===========================
+
+Now replace the build plugins in pom.xml with below.
+
+<build>
+<plugins>
+    <plugin>
+    <groupId>com.ethlo.persistence.tools</groupId>
+    <artifactId>eclipselink-maven-plugin</artifactId>
+    <version>2.7.1.1</version>
+    <dependencies> 
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+    </dependencies>
+    <executions>
+        <execution>
+            <id>weave</id>
+            <phase>process-classes</phase>
+            <goals>
+                <goal>weave</goal> 
+            </goals>
+        </execution>
+        <execution>
+            <id>modelgen</id>
+            <phase>generate-sources</phase>
+            <goals>
+                <goal>modelgen</goal> 
+            </goals>
+        </execution>
+    </executions>
+    
+    
+    </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-libs</id>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.jboss.jandex</groupId>
+                <artifactId>jandex-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>make-index</id>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+
+
+Now open ExampleResource.java , Add the below Libraries
+========================================================
+Add @Dependent, @PersistentContext and EntityManager.
+
+
+
+package io.helidon.example.jpa;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.enterprise.context.Dependent;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.transaction.Transactional;
+import javax.ws.rs.PathParam;
+/**
+ * Simple JAXRS resource class.
+ */
+@Path("/example")
+@Dependent
+
+public class ExampleResource {
+@PersistenceContext 
+private EntityManager em;
+    @Produces("text/plain")
+    @Path("/")
+    @GET
+    public String get() {
+        return "It works!";
+    }
+
+    @GET
+   @Path("response/{salutation}")
+  @Produces("text/plain")
+   @Transactional 
+public String getResponse(@PathParam("salutation") String salutation) {
+    final Greeting greeting = this.em.find(Greeting.class, salutation);
+    final String returnValue;
+    if (greeting == null) {
+        returnValue = null;
+    } else {
+        returnValue = greeting.getResponse();
+    }
+    return returnValue;
+}
+}
+
+
+mvn package
+java --illegal-access=permit -jar target/helidon-jpa.jar
+curl http://localhost:8080/example/response/Marco

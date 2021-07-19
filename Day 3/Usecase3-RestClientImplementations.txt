@@ -1,0 +1,208 @@
+Step 0:
+Download Maven - https://maven.apache.org/download.cgi
+Download Eclipse - https://www.eclipse.org/downloads/
+
+For Windows Installation
+
+JDK Installation -https://www.oracle.com/java/technologies/javase-jdk16-downloads.html
+Maven Installation - http://maven.apache.org , Download the Zip and Extract to directory
+Open GitBash Environment
+
+Step 1
+
+Create workspace directoy
+mkdir workspace
+cd workspace
+
+Step 2 
+Generate the Helidon MP Project
+
+mvn -U archetype:generate -DinteractiveMode=false \
+    -DarchetypeGroupId=io.helidon.archetypes \
+    -DarchetypeArtifactId=helidon-quickstart-mp \
+    -DarchetypeVersion=2.3.0 \
+    -DgroupId=io.helidon.examples \
+    -DartifactId=helidon-quickstart-mp \
+    -Dpackage=io.helidon.examples.quickstart.mp
+
+
+Step 3
+verify check
+cd helidon-quickstart-mp
+mvn package
+java -jar target/helidon-quickstart-mp.jar
+
+
+Step 4
+Open Git Bash
+curl http://localhost:8080/greet
+Press ctlc -c to stop. 
+Verify Helidon MP version.
+
+
+Step 5
+Now Lets work for Eclipse
+open the workspace.
+Click Launch
+File -Import Menu --> Existing Maven Projects - Click Next- Choose Helidon-quickstart-Mp - Select pom.xml--click finish
+
+If any resolve issues -ignore -click finish
+Windows - Preferences - Maven- Errors -
+Verify Plugin Execution not covered by Lifecycle --> Set to Warning.
+
+Step 6
+Eclipse will take time to open up.
+Explore Filesystems and Resources..
+Expand Meta-Info and open microprofile-config.properties
+
+Step 7
+File New --> Class under src/main/java 
+
+package io.helidon.examples.quickstart.mp;
+
+import io.helidon.microprofile.server.Server;
+import java.io.IOException;
+
+public final class Main {
+
+    private Main() { }
+
+    public static void main(final String[] args) throws IOException {
+        Server server = startServer();
+        System.out.println("http://localhost:" + server.port() + "/greet");
+    }
+
+    static Server startServer() {
+        return Server.builder()
+            .build()
+            .start();
+    }
+}
+
+Step 8
+
+Now Eclipse can simply start the application using the Main.class. (Right click on Main.java and select Run->Java Application)
+
+Any Security Popups - Allow Popups.
+
+After using the default config file now customise the configuration on both projects.
+
+Step 9
+For Configuration
+
+First for MP project create the mp-config.yaml config file in the resources folder. Right click on src/main/resources and select New->Other...
+General-File..
+Type mp-config.yaml as name.
+
+Edit the below
+
+app:
+ greeting: "Hello Helidon MP from YAML config"
+
+Save the file.
+
+
+Step 10
+In the MP project open the io.helidon.examples.quickstart.mp.Main class and add a new buildConfig method which reads the new config file.
+
+private static Config buildConfig() {
+    return Config.builder()
+        .disableEnvironmentVariablesSource()
+        .sources(
+            classpath("mp-config.yaml").optional(),
+            classpath("META-INF/microprofile-config.properties"))
+        .build();
+}
+
+Step 11
+Add the below import packages:
+
+import io.helidon.config.Config;
+import static io.helidon.config.ConfigSources.classpath;
+
+Edit Server.bulder() to below under startServer():
+
+return Server.builder()
+    	        .config(buildConfig())
+    	        .build()
+    	        .start();
+
+Step 12
+
+Run the application
+
+Open the browser:
+check the result at: http://localhost:8080/greet
+
+open the browser
+check the result at http://localhost:8080/metrics
+
+
+Step 13
+Open Git Bash
+curl -s -H 'Accept: application/json' -X GET http://localhost:8080/metrics/
+
+In browser or Bash
+
+A base set of metrics, available at /metrics/base, as specified by the MicroProfile Metrics specification.
+
+A set of Helidon-specific metrics, available at /metrics/vendor 
+Check the plain text result using browser: http://localhost:8080/metrics/vendor
+
+
+Step 14
+
+Now Lets add Rest Client to Services.
+
+In this example MP application will call the SE application's service. This communication is very common in microservices architecture. MicroProfile Rest Client adds the capability to invoke remote microservices using a JAX-RS like interface to declare the operations.
+
+The RegisterRestClient annotation has a property baseUri that can be used to define the base endpoint of this client. In the interface you need to only define the necessary endpoints which is now the /greet/{name}. 
+To create new interface right click on the io.helidon.examples.quickstart.mp package under the helidon-quickstart-mp project in the left Project Explorer area and select New->Interface menu item. Type the interface name: GreetRestClient and click OK. Please pay attention, now you need to create interface and not class! Copy the following source in the new interface.
+
+package io.helidon.examples.quickstart.mp;
+
+import javax.json.JsonObject;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+
+import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+
+@RegisterRestClient(baseUri="http://localhost:8080/greet")
+interface GreetRestClient {
+
+     @GET
+     JsonObject getDefaultMessage();
+
+     @Path("/{name}")
+     @GET
+     JsonObject getMessage(@PathParam("name") String name);
+
+}
+
+
+Step 15
+
+Once a rest client interface is annotated, it can be injected into any CDI bean. Open GreetResource.java and add the following part example after the last method:
+
+@Inject
+@RestClient
+GreetRestClient restClient;
+
+@GET
+@Path("/outbound/{name}")
+public JsonObject outbound(@PathParam("name") String name) {
+   return restClient.getMessage(name);
+}
+
+
+Step 16
+Save and Run the application.
+
+
+
+
+
+
+
+

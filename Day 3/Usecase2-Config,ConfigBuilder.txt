@@ -1,0 +1,120 @@
+Use case 1 
+Config and Config Builder
+
+Step 1
+Create a Project
+mkdir configs
+cd configs
+
+mvn -U archetype:generate -DinteractiveMode=false \
+    -DarchetypeGroupId=io.helidon.archetypes \
+    -DarchetypeArtifactId=helidon-quickstart-mp \
+    -DarchetypeVersion=2.3.1 \
+    -DgroupId=io.helidon.examples \
+    -DartifactId=helidon-quickstart-mp \
+    -Dpackage=io.helidon.examples.quickstart.mp
+
+
+Step 2
+
+cd helidon-quickstart-mp
+observe the Src folder - Review the source code
+Look at resources folder
+
+Step 3
+
+Add Main.java in Src folder 
+package io.helidon.examples.quickstart.mp;
+
+import io.helidon.microprofile.server.Server;
+import java.io.IOException;
+
+public final class Main {
+
+    private Main() { } 
+
+    public static void main(final String[] args) throws IOException {
+        Server server = startServer();
+        System.out.println("http://localhost:" + server.port() + "/greet");
+    }
+
+    static Server startServer() {
+        return Server.create().start(); 
+    }
+
+}
+
+Step 4
+
+Change the pom.xml to below
+<properties>
+        <mainClass>io.helidon.examples.quickstart.mp.Main</mainClass>
+    </properties>
+
+Manual Method:
+
+mvn package -DskipTests=true
+java -jar target/helidon-quickstart-mp.jar
+curl -I http://localhost:8080/greet
+
+
+Step 5
+
+Now , Change app.greeting in the META-INF/microprofile-config.properties from Hello to HelloFromMPConfig:
+
+mvn package -DskipTests=true
+java -jar target/helidon-quickstart-mp.jar
+curl -I http://localhost:8080/greet
+
+Step 6
+
+export APP_GREETING=HelloFromEnvironment
+java -jar target/helidon-quickstart-mp.jar
+curl -I http://localhost:8080/greet
+
+Step 7
+
+Now add a file config.properties in Resources/META-info folder
+app.greeting=HelloFrom-config.properties
+
+
+Replace Main.java with below
+package io.helidon.examples.quickstart.mp;
+
+import io.helidon.config.Config;
+import static io.helidon.config.ConfigSources.classpath;
+import io.helidon.microprofile.server.Server;
+import java.io.IOException;
+
+public final class Main {
+
+    private Main() { } 
+
+    public static void main(final String[] args) throws IOException {
+        Server server = startServer();
+        
+    
+        System.out.println("http://localhost:" + server.port() + "/greet");
+    }
+    static Server startServer() {
+        return Server.builder()
+            .config(buildConfig()) 
+            .build()
+            .start();
+    }
+
+    private static Config buildConfig() {
+    return Config.builder().disableEnvironmentVariablesSource() 
+        .sources(
+            classpath("META-INF/config.properties"), 
+            classpath("META-INF/microprofile-config.properties")) 
+        .build();
+}
+}
+
+Step 8
+mvn package -DskipTests=true
+java -jar target/helidon-quickstart-mp.jar
+curl -I http://localhost:8080/greet
+
+
