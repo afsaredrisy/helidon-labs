@@ -1,0 +1,116 @@
+Step 0:
+Download Maven - https://maven.apache.org/download.cgi
+Download Eclipse - https://www.eclipse.org/downloads/
+
+For Windows Installation
+
+JDK Installation -https://www.oracle.com/java/technologies/javase-jdk16-downloads.html
+Maven Installation - http://maven.apache.org , Download the Zip and Extract to directory
+Set Environment Variables if needed.
+
+
+Open GitBash Environment
+
+Step 1
+
+Create workspace directoy
+mkdir workspace
+cd workspace
+
+Step 2 
+Generate the Helidon MP Project
+
+mvn -U archetype:generate -DinteractiveMode=false \
+    -DarchetypeGroupId=io.helidon.archetypes \
+    -DarchetypeArtifactId=helidon-quickstart-mp \
+    -DarchetypeVersion=2.3.0 \
+    -DgroupId=io.helidon.examples \
+    -DartifactId=helidon-quickstart-mp \
+    -Dpackage=io.helidon.examples.quickstart.mp
+
+
+Step 3
+verify check
+cd helidon-quickstart-mp
+mvn package
+java -jar target/helidon-quickstart-mp.jar
+
+
+Step 4
+Open Git Bash
+curl http://localhost:8080/greet
+Press ctlc -c to stop. 
+Verify Helidon MP version.
+
+
+Step 5
+Now Lets work for Eclipse
+open the workspace.
+Click Launch
+File -Import Menu --> Existing Maven Projects - Click Next- Choose Helidon-quickstart-Mp - Select pom.xml--click finish
+
+If any resolve issues -ignore -click finish
+Windows - Preferences - Maven- Errors -
+Verify Plugin Execution not covered by Lifecycle --> Set to Warning.
+
+Step 6
+Eclipse will take time to open up.
+Explore Filesystems and Resources..
+Expand Meta-Info and open microprofile-config.properties
+
+Step 7
+File New --> Class under src/main/java 
+
+package io.helidon.examples.quickstart.mp;
+
+import io.helidon.microprofile.server.Server;
+import java.io.IOException;
+
+public final class Main {
+
+    private Main() { }
+
+    public static void main(final String[] args) throws IOException {
+        Server server = startServer();
+        System.out.println("http://localhost:" + server.port() + "/greet");
+    }
+
+    static Server startServer() {
+        return Server.builder()
+            .build()
+            .start();
+    }
+}
+
+Step 8
+
+Now Eclipse can simply start the application using the Main.class. (Right click on Main.java and select Run->Java Application)
+
+Any Security Popups - Allow Popups.
+
+
+Step 9
+
+Run the application
+
+Open the browser:
+check the result at: http://localhost:8080/greet
+
+open the browser
+check the result at http://localhost:8080/metrics
+
+
+Step 10
+
+It’s a good practice to monitor your microservice’s health, to ensure that it is available and performs correctly.
+Check built-in health status at http://localhost:8080/health. 
+
+
+
+
+
+
+
+
+
+
