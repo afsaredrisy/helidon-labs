@@ -1,0 +1,31 @@
+Step 1
+Create a Bucket and Objects in Bucket
+Name of bucket -- demobucket
+Name of object--testfileReadme.md (take any text file and load it in object).
+Observe Compartment-ID
+
+Step 2
+git clone
+sh oci-setup.sh
+ --passphrase blank
+ --compartment id
+
+Step 3
+./oci-setup.sh && source oci-env
+
+Step 4
+verify pom.xml
+
+Step 5
+mvn package
+java -Doci.auth.fingerprint="${OCI_AUTH_FINGERPRINT}" \
+    -Doci.auth.passphraseCharacters="${OCI_AUTH_PASSPHRASE}" \
+    -Doci.auth.privateKey="${OCI_AUTH_PRIVATEKEY}" \
+    -Doci.auth.tenancy="${OCI_AUTH_TENANCY}" \
+    -Doci.auth.user="${OCI_AUTH_USER}" \
+    -Doci.objectstorage.compartmentId="${OCI_OBJECTSTORAGE_COMPARTMENT}" \
+    -Doci.objectstorage.region="${OCI_OBJECTSTORAGE_REGION}" \
+    -jar target/helidon-examples-integrations-cdi-oci-objectstorage.jar
+
+Step 6
+curl http://localhost:8080/logo/ocuocictrng2/demobucket2/testfileREADME.md
