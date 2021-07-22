@@ -57,7 +57,7 @@ Place this in your pom.xml file in the <dependencies> section:
 he next component that you’ll add is a Java Transaction API (JTA)-compliant transaction manager. Helidon has support for the Narayana transaction engine. This component will allow your JPA application to not have to worry about setting up and tearing down transactions manually, or doing the right thing when rollbacks occur
 
 
-dependency>
+<dependency>
     <groupId>io.helidon.integrations.cdi</groupId>   
     <artifactId>helidon-integrations-cdi-jta-weld</artifactId>     
     <scope>runtime</scope>
