@@ -1,0 +1,197 @@
+Step 1
+
+Create workspace directoy
+mkdir workspace
+cd workspace
+
+Step 2 
+Generate the Helidon MP Project
+
+mvn -U archetype:generate -DinteractiveMode=false \
+    -DarchetypeGroupId=io.helidon.archetypes \
+    -DarchetypeArtifactId=helidon-quickstart-mp \
+    -DarchetypeVersion=2.3.0 \
+    -DgroupId=io.helidon.examples \
+    -DartifactId=helidon-quickstart-mp \
+    -Dpackage=io.helidon.examples.quickstart.mp
+
+
+Step 3
+verify check
+cd helidon-quickstart-mp
+mvn package
+java -jar target/helidon-quickstart-mp.jar
+
+
+Step 4
+Open Git Bash
+curl http://localhost:8080/greet
+Press ctlc -c to stop. 
+Verify Helidon MP version.
+
+Step 5
+
+Run the application
+
+open the browser
+check the result at http://localhost:8080/metrics
+
+
+Step 6
+Open Git Bash
+curl -s -H 'Accept: application/json' -X GET http://localhost:8080/metrics/
+
+In browser or Bash
+
+A base set of metrics, available at /metrics/base, as specified by the MicroProfile Metrics specification.
+A set of Helidon-specific metrics, available at /metrics/vendor 
+Check the plain text result using browser: http://localhost:8080/metrics/vendor
+
+
+Step 7
+
+Now Lets add a Custom metrics 
+Add custom metrics
+In case of MP it is basically just an annotation. Add the following annotation to the getDefaultMessage method in the io.helidon.examples.quickstart.mp.GreetResource class.
+
+@Timed
+@Counted(name = "my-mp-metrics", absolute = true)
+
+Fix the Project Setup.
+Run the project application.
+
+Step 8
+
+Visit - http://localhost:8080/greet
+Open Browser
+http://localhost:8080/metrics/application/my-mp-metrics
+
+Another metric types also available for Prometheus about the configured method. You can check at 
+http://localhost:8080/metrics/application/io.helidon.examples.quickstart.mp.GreetResource.getDefaultMessage. 
+These are history/summary and gauge type metrics.
+
+Step 9
+
+It’s a good practice to monitor your microservice’s health, to ensure that it is available and performs correctly.
+Check built-in health status at http://localhost:8080/health. The result should have similar:
+
+
+Step 10
+Add Liveness Health Check
+Now Lets Explore more on checks:
+
+To add custom liveness health check create a new class called GreetLivenessCheck in io.helidon.examples.quickstart.mp package. (To create new class right click on the io.helidon.examples.quickstart.mp package under the helidon-quickstart-mp project in the left Project Explorer area and select New->Class menu item. Type the class name: GreetLivenessCheck and click OK.) Copy the the content below into the new class.
+package io.helidon.examples.quickstart.mp;
+
+import javax.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.health.HealthCheck;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Liveness;
+
+@Liveness
+@ApplicationScoped
+public class GreetLivenessCheck implements HealthCheck {
+
+	@Override
+	public HealthCheckResponse call() {
+		return HealthCheckResponse.named("MyMPLivenessCheck").up().withData("time", System.currentTimeMillis()).build();
+	}
+}
+
+
+Step 11
+Stop and Run the application
+
+Verify Health - http://localhost:8080/health
+--Verify MyUPLiveness Check with State , Status and time.
+
+Step 12
+
+Now Lets do Readiness check.
+
+To add custom readiness health check create a new class called GreetReadinessCheck in io.helidon.examples.quickstart.mp package. (To create new class right click on the io.helidon.examples.quickstart.mp package under the helidon-quickstart-mp project in the left Project Explorer area and select New->Class menu item. Type the class name: GreetReadinessCheck and click OK.) Copy the the content below into the new class.
+
+package io.helidon.examples.quickstart.mp;
+
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
+import javax.enterprise.context.ApplicationScoped;
+
+import javax.enterprise.context.Initialized;
+import javax.enterprise.event.Observes;
+import org.eclipse.microprofile.health.HealthCheck;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Readiness;
+
+@Readiness
+@ApplicationScoped
+public class GreetReadinessCheck implements HealthCheck {
+  private AtomicLong readyTime = new AtomicLong(0);
+
+
+  @Override
+  public HealthCheckResponse call() {
+    return HealthCheckResponse.named("MyMPReadinessCheck")  
+        .state(isReady())
+        .withData("time", readyTime.get())
+        .build();
+  }
+
+  public void onStartUp(
+      @Observes @Initialized(ApplicationScoped.class) Object init) {
+    readyTime = new AtomicLong(System.currentTimeMillis());
+  }
+
+  /**
+   * Become ready after 10 seconds
+   *
+   * @return true if application ready
+   */
+  private boolean isReady() {
+    return Duration.ofMillis(System.currentTimeMillis() - readyTime.get()).getSeconds() >= 10;
+  }
+}
+
+Step 13
+
+Verify Health - http://localhost:8080/health
+--Verify MyUPReadiness Check with State , Status and time.
+
+
+Now Lets Continue for Zipkin
+============================
+
+Step 14
+
+Tracing:
+Helidon includes support for tracing through the OpenTracing APIs. Tracing is integrated with WebServer and Security. Helidon has further integration with Zipkin and Jaeger tracer tools. This lab demonstrates Zipkin usage.
+
+Add dependency in pom.xml 
+<dependency>
+    <groupId>io.helidon.tracing</groupId>
+    <artifactId>helidon-tracing-zipkin</artifactId>
+</dependency>
+
+Step 15
+
+Configure the service name here too in the microprofile-config.properties property file which is located under src/main/resources/META-INF folder. Add the following property:
+
+tracing.service=helidon-mp
+
+Step 16
+
+Start Zipkin without docker
+open Gitbash
+curl -LSs https://raw.githubusercontent.com/nagypeter/helidon-tutorial/master/scripts/setup.zipkin.sh | bash
+
+This will start the Zipkin tracer on http://localhost:9411 - this is also the default configuration that Helidon expects.
+You can open the dashboard on http://localhost:9411/zipkin/
+
+Step 17
+
+Start run application  from Eclipse. (stop if running and start again)
+
+Now to generate tracing information invoke again the outbound call using the browser
+ http://localhost:8080/greet/outbound/Bill
+
+Now open Zipkin to see the tracing information: http://localhost:9411/zipkin/ and on the (default) Find a trace page click the Run Query button. If you have multiple results click Expand All to find easily that which has multiple components in the transaction. Then open the details with Show button.
